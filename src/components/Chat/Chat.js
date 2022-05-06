@@ -10,6 +10,10 @@ import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import "./Chat.css";
 import db from "../../firbase";
+import { useStateValue } from "../StateProvider/StateProvider";
+import firebase from "firebase/compat/app";
+import "firebase/compat/auth";
+import "firebase/compat/firestore";
 
 function Chat() {
   const [seed, setSeed] = useState("");
@@ -17,6 +21,7 @@ function Chat() {
   const { roomId } = useParams();
   const [roomName, setRoomName] = useState("");
   const [messages, setMessages] = useState([]);
+  const [{ user }, dispatch] = useStateValue();
 
   useEffect(() => {
     if (roomId) {
@@ -40,6 +45,11 @@ function Chat() {
 
   const sendMessage = (e) => {
     e.preventDefault();
+    db.collection("rooms").doc(roomId).collection("messages").add({
+      message: input,
+      name: user.displayName,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+    });
     setInput("");
   };
   return (
@@ -48,7 +58,12 @@ function Chat() {
         <Avatar src={`https://avatars.dicebear.com/api/male/${seed}.svg`} />
         <div className="chatHeaderInfo">
           <h3>{roomName}</h3>
-          <p>Last Scene at ...</p>
+          <p>
+            Last Seen{" "}
+            {new Date(
+              messages[messages.length - 1]?.timestamp?.toDate()
+            ).toUTCString()}
+          </p>
         </div>
         <div className="chatHeaderRight">
           <IconButton>
@@ -64,7 +79,11 @@ function Chat() {
       </div>
       <div className="chatBody">
         {messages.map((message) => (
-          <p className={`chatMessage ${true && "chatReciever"}`}>
+          <p
+            className={`chatMessage ${
+              message.name === user.displayName && "chatReciever"
+            }`}
+          >
             <span className="chatName">{message.name}</span>
             {message.message}
             <span className="chatTimestamp">
